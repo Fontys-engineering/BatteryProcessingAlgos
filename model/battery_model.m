@@ -43,6 +43,7 @@ classdef battery_model < matlab.System
 
         function reflection = stepImpl(obj, input)
             internal_transmit = [input 0];
+            reflection = obj.reflect_delay(1,1);
             for i=1:obj.NUM_IMPEDANCES
                 % STAGE
                 internal_transmit(2) = obj.transmit_delay(i,obj.DELAY_LENGTH(i))*obj.S21(i) + obj.reflect_delay(i+1,1)*obj.S22(i);
@@ -55,7 +56,6 @@ classdef battery_model < matlab.System
                 obj.transmit_delay(i,1:obj.DELAY_LENGTH(i)) = [internal_transmit(1) obj.transmit_delay(i,1:obj.DELAY_LENGTH(i)-1)];
                 internal_transmit(1) = internal_transmit(2);
             end
-            reflection = obj.reflect_delay(1,1);
         end
 
         function resetImpl(obj)
