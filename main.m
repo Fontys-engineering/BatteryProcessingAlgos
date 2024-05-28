@@ -8,16 +8,16 @@ stepTime = 2.5e-12;
 stopTime = 10e-9;
 inputMag = 3;
 
-simIn = Simulink.SimulationInput("model");
-simIn = simIn.setBlockParameter("model/DUT","NUM_IMPEDANCES",string(num_impedances));
+simIn = Simulink.SimulationInput("setup_model");
+simIn = simIn.setBlockParameter("setup_model/DUT","NUM_IMPEDANCES",string(num_impedances));
 formatString = "[";
 for i = 1:num_impedances
     formatString = formatString + "%d ";
 end
 formatString = formatString + "]";
-simIn = simIn.setBlockParameter("model/DUT","REFLECT_COEF",sprintf(formatString, reflection_coefs));
-simIn = simIn.setBlockParameter("model/DUT","DELAY_LENGTH",sprintf(formatString, delayLengths));
-simIn = simIn.setBlockParameter("model/inputGain","Gain",string(inputMag));
+simIn = simIn.setBlockParameter("setup_model/DUT","REFLECT_COEF",sprintf(formatString, reflection_coefs));
+simIn = simIn.setBlockParameter("setup_model/DUT","DELAY_LENGTH",sprintf(formatString, delayLengths));
+simIn = simIn.setBlockParameter("setup_model/inputGain","Gain",string(inputMag));
 simIn = simIn.setModelParameter("FixedStep",string(stepTime));
 simIn = simIn.setModelParameter("StopTime",string(stopTime));
 out = sim(simIn);
