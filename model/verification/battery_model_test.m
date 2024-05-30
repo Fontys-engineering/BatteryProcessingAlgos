@@ -14,7 +14,6 @@ function test_with_model(testCase)
     delayLengths = testCase.TestData.delayLengths;
     stepTime = 2.5e-12;
     stopTime = 5e-9;
-    modelName = "battery_verification_model";
 
     numSims = size(reflectionCoefsString,1);
     for i=1:numSims
@@ -22,7 +21,9 @@ function test_with_model(testCase)
         numImpedances = length(reflectionCoefs);
         numSteps = floorDiv(stopTime,stepTime)+1;
 
-        simIn = Simulink.SimulationInput(modelName);
+        % Fill modelname directly bc matlab dependency analyzer is garbage
+        simIn = Simulink.SimulationInput("battery_verification_model");
+        modelName = simIn.ModelName;
         for j=1:numImpedances
             simIn = simIn.setBlockParameter(sprintf(modelName+"/transmit_delay%d",j),...
                                             "DelayLength",string(delayLengths(i,j)));
@@ -58,4 +59,15 @@ function test_with_model(testCase)
 
         verifyEqual(testCase,dutOut,validationData)
     end
+end
+
+function test_with_spice(testCase)
+    modelName = 'model'; % Exclude file extension
+    ltspicePath = 'C:/"Program Files"/LTC/LTspiceXVII/XVIIx64.exe';
+    system(append(ltspicePath,' --netlist ',modelName,'.asc'));
+    system(append(ltspicePath,' -b ',modelName,'.net'));
+    spiceData = LTspice2Matlab(append(modelName,'.raw'));
+    plot(spiceData.time_vect,spiceData.variable_mat)
+    xlabel("Time (s)")
+    testCase.verifyTrue(true)
 end

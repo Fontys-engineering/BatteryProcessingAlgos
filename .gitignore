@@ -31,3 +31,8 @@ codegen/
 
 # Cloud based storage dotfile
 .MATLABDriveTag
+
+# LTspice files
+*.log
+*.net
+*.raw
