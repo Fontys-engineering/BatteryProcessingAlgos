@@ -35,7 +35,7 @@ classdef battery_model < matlab.System
     methods (Access = protected)
         function setupImpl(obj)
             for i=1:obj.NUM_IMPEDANCES
-                obj.S11(i) = (obj.IMPEDANCES(i)-obj.IMPEDANCES(i+1))/(obj.IMPEDANCES(i)+obj.IMPEDANCES(i+1));
+                obj.S11(i) = (obj.IMPEDANCES(i+1)-obj.IMPEDANCES(i))/(obj.IMPEDANCES(i+1)+obj.IMPEDANCES(i));
                 obj.delayLength(i) = int32(obj.DELAY_LENGTH_TIME(i)/obj.STEP_TIME);
             end
             obj.S21 = 1 + obj.S11;

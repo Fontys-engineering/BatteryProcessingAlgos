@@ -8,14 +8,16 @@ function setup(testCase)
                                     "50" "300" "39" "76.5"; "100" "200" "400" "1"];
     testCase.TestData.delayLengths = [250e-12 250e-12 250e-12; 125e-12 190e-12 222.5e-12;
                                       85e-12 87.5e-12 90e-12; 82.5e-12 110e-12 137.5e-12];
+    testCase.TestData.stepTime = 2.5e-12;
+    testCase.TestData.stopTime = 5e-9;
 end
 
 function test_with_model(testCase)
     delayLengths = testCase.TestData.delayLengths;
     impedancesString = testCase.TestData.impedances;
     impedances = arrayfun(@str2num, impedancesString);
-    stepTime = 2.5e-12;
-    stopTime = 5e-9;
+    stepTime = testCase.TestData.stepTime;
+    stopTime = testCase.TestData.stopTime;
     numStages = length(impedances)-1;
     numSteps = floorDiv(stopTime,stepTime)+1;
 
@@ -36,8 +38,8 @@ function test_with_model(testCase)
 
         for j = 1:numStages
             % Calculate S-parameters as string to avoid losing precision
-            S11String(j) = "("+impedancesString(i,j)+"-"+impedancesString(i,j+1)+")/("+...
-                           impedancesString(i,j)+"+"+impedancesString(i,j+1)+")";
+            S11String(j) = "("+impedancesString(i,j+1)+"-"+impedancesString(i,j)+")/("+...
+                           impedancesString(i,j+1)+"+"+impedancesString(i,j)+")";
         end
         for j=1:numStages-1
             simIn = simIn.setBlockParameter(sprintf(modelName+"/stage%d/S11",j),...
@@ -72,12 +74,31 @@ function test_with_model(testCase)
 end
 
 function test_with_spice(testCase)
+    impedances = arrayfun(@str2num,testCase.TestData.impedances(1,:));
+    delayLengths = testCase.TestData.delayLengths(1,:);
+    numStages = numel(delayLengths);
+    stepTime = testCase.TestData.stepTime;
+    stopTime = testCase.TestData.stopTime;
+    numSteps = int32(stopTime/stepTime)+1;
+
     modelName = 'model'; % Exclude file extension
     ltspicePath = 'C:/"Program Files"/LTC/LTspiceXVII/XVIIx64.exe';
     system(append(ltspicePath,' --netlist ',modelName,'.asc'));
     system(append(ltspicePath,' -b ',modelName,'.net'));
     spiceData = LTspice2Matlab(append(modelName,'.raw'));
+
+    dut = battery_model("NUM_IMPEDANCES",numStages,"IMPEDANCES",...
+                        impedances,"DELAY_LENGTH_TIME",delayLengths);
+    dutOut = zeros(numSteps,1);
+    for j=1:numSteps
+        dutOut(j) = dut(double(j==1));
+    end
+
+    hold on
     plot(spiceData.time_vect,spiceData.variable_mat)
+    plot(0:stepTime:stopTime,dutOut)
+    hold off
     xlabel("Time (s)")
+    legend(["LTspice" "DUT"])
     testCase.verifyTrue(true)
 end
