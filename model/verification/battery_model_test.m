@@ -8,7 +8,7 @@ function setup(testCase)
                                     "50" "300" "39" "76.5"; "100" "200" "400" "1"];
     testCase.TestData.delayLengths = [250e-12 250e-12 250e-12; 125e-12 190e-12 222.5e-12;
                                       85e-12 87.5e-12 90e-12; 82.5e-12 110e-12 137.5e-12];
-    testCase.TestData.stepTime = 2.5e-12;
+    testCase.TestData.stepTime = 100e-15;
     testCase.TestData.stopTime = 5e-9;
 end
 
@@ -69,7 +69,7 @@ function test_with_model(testCase)
             dutOut(j) = dut(double(j==1));
         end
 
-        verifyEqual(testCase,dutOut,validationData)
+        testCase.verifyEqual(dutOut,validationData)
     end
 end
 
@@ -93,12 +93,14 @@ function test_with_spice(testCase)
     for j=1:numSteps
         dutOut(j) = dut(double(j==1));
     end
+    dutTime = 0:stepTime:stopTime;
 
     hold on
     plot(spiceData.time_vect,spiceData.variable_mat)
-    plot(0:stepTime:stopTime,dutOut)
+    plot(dutTime,dutOut)
     hold off
     xlabel("Time (s)")
     legend(["LTspice" "DUT"])
+
     testCase.verifyTrue(true)
 end

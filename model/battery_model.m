@@ -5,7 +5,7 @@ classdef battery_model < matlab.System
     properties (Nontunable)
         NUM_IMPEDANCES = 3;
         IMPEDANCES = [50 100 200 300]
-        STEP_TIME = 2.5e-12; % TODO: make programmatic
+        STEP_TIME = 100e-15; % TODO: make programmatic
         DELAY_LENGTH_TIME
     end
 
