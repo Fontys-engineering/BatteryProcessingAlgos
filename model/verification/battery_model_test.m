@@ -6,7 +6,8 @@ function setup(testCase)
     % Specify as string to avoid precission error
     testCase.TestData.impedances = ["50" "25" "225/11" "0"; "50" "30" "30/13" "0";
                                     "50" "300" "39" "76.5"; "100" "200" "400" "1"];
-    testCase.TestData.delayLengths = [100 100 100; 50 76 89; 34 35 36; 33 44 55];
+    testCase.TestData.delayLengths = [250e-12 250e-12 250e-12; 125e-12 190e-12 222.5e-12;
+                                      85e-12 87.5e-12 90e-12; 82.5e-12 110e-12 137.5e-12];
 end
 
 function test_with_model(testCase)
@@ -24,10 +25,13 @@ function test_with_model(testCase)
         simIn = Simulink.SimulationInput("battery_verification_model");
         modelName = simIn.ModelName;
         for j=1:numStages
+            delayLengthsUnit(j) = delayLengths(i,j)/stepTime;
+        end
+        for j=1:numStages
             simIn = simIn.setBlockParameter(sprintf(modelName+"/transmit_delay%d",j),...
-                                            "DelayLength",string(delayLengths(i,j)));
+                                            "DelayLength",string(delayLengthsUnit(j)));
             simIn = simIn.setBlockParameter(sprintf(modelName+"/reflect_delay%d",j),...
-                                            "DelayLength",string(delayLengths(i,j)));
+                                            "DelayLength",string(delayLengthsUnit(j)));
         end
 
         for j = 1:numStages
@@ -57,7 +61,7 @@ function test_with_model(testCase)
         validationData = squeeze(out.yout{1}.Values.Data);
 
         dut = battery_model("NUM_IMPEDANCES",numStages,"IMPEDANCES",...
-                            impedances(i,:),"DELAY_LENGTH",delayLengths(i,:));
+                            impedances(i,:),"DELAY_LENGTH_TIME",delayLengths(i,:));
         dutOut = zeros(numSteps,1);
         for j=1:numSteps
             dutOut(j) = dut(double(j==1));
