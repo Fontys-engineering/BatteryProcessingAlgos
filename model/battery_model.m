@@ -4,10 +4,8 @@ classdef battery_model < matlab.System
     % Public, non-tunable properties
     properties (Nontunable)
         NUM_IMPEDANCES = 3;
-        REFLECT_COEF = [0.5 0.5 0.5];
-        PROPAGATION_DELAY = 200e-9;
+        IMPEDANCES = [50 100 200 300]
         STEP_TIME = 2.5e-12; % TODO: make programmatic
-        % DELAY_LENGTH = int32(PROPAGATION_DELAY / STEP_TIME);
         DELAY_LENGTH
     end
 
@@ -35,10 +33,12 @@ classdef battery_model < matlab.System
 
     methods (Access = protected)
         function setupImpl(obj)
-            obj.S11 = obj.REFLECT_COEF;
-            obj.S21 = 1 + obj.REFLECT_COEF;
-            obj.S12 = 1 - obj.REFLECT_COEF;
-            obj.S22 = -obj.REFLECT_COEF;
+            for i=1:obj.NUM_IMPEDANCES
+                obj.S11(i) = (obj.IMPEDANCES(i)-obj.IMPEDANCES(i+1))/(obj.IMPEDANCES(i)+obj.IMPEDANCES(i+1));
+            end
+            obj.S21 = 1 + obj.S11;
+            obj.S12 = 1 - obj.S11;
+            obj.S22 = -obj.S11;
         end
 
         function reflection = stepImpl(obj, input)
