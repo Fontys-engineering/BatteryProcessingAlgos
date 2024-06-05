@@ -83,23 +83,45 @@ function test_with_model(testCase)
 end
 
 function test_with_spice(testCase)
-    dutOut = testCase.TestData.dutOut(1,:);
+    dutOut = testCase.TestData.dutOut;
     stepTime = testCase.TestData.stepTime;
     stopTime = testCase.TestData.stopTime;
     dutTime = 0:stepTime:stopTime;
+    impedances = testCase.TestData.impedances;
+    delayLength = testCase.TestData.delayLengths;
 
-    modelName = 'model'; % Exclude file extension
-    ltspicePath = 'C:/"Program Files"/LTC/LTspiceXVII/XVIIx64.exe';
-    system(append(ltspicePath,' --netlist ',modelName,'.asc'));
-    system(append(ltspicePath,' -b ',modelName,'.net'));
-    spiceData = LTspice2Matlab(append(modelName,'.raw'));
+    modelName = "spice_model"; % Exclude file extension
+    ltspicePath = "C:/""Program Files""/LTC/LTspiceXVII/XVIIx64.exe";
+    numSims = size(impedances,1);
+    for i=1:numSims
+        % Create netlist
+        template = fileread("model/verification/spice_model_template.net");
+        netlistID = fopen("spice_model.net", "w");
+        fprintf(netlistID,"%s",template);
+        fprintf(netlistID,".PARAM simTime %e\n",stopTime);
+        fprintf(netlistID,".PARAM imp1 %s\n",impedances(i,1));
+        fprintf(netlistID,".PARAM imp2 %s\n",impedances(i,2));
+        fprintf(netlistID,".PARAM imp3 %s\n",impedances(i,3));
+        fprintf(netlistID,".PARAM imp4 %s\n",impedances(i,4));
+        fprintf(netlistID,".PARAM pd1 %e\n",delayLength(i,1));
+        fprintf(netlistID,".PARAM pd2 %e\n",delayLength(i,2));
+        fprintf(netlistID,".PARAM pd3 %e\n",delayLength(i,3));
+        fprintf(netlistID,".backanno\n.end\n");
+        fclose(netlistID);
+        system(ltspicePath+" -b "+modelName+".net");
+        delete spice_model.net
+        spiceData(i) = LTspice2Matlab(modelName+".raw");
+    end
 
-    hold on
-    plot(spiceData.time_vect*1e9,spiceData.variable_mat)
-    plot(dutTime*1e9,dutOut)
-    hold off
-    xlabel("Time (ns)")
-    legend(["LTspice" "DUT"])
+    for i=1:numSims
+        subplot(2,2,i)
+        hold on
+        plot(spiceData(i).time_vect*1e9,spiceData(i).variable_mat)
+        plot(dutTime*1e9,dutOut(i,:))
+        hold off
+        xlabel("Time (ns)")
+        legend(["LTspice" "DUT"])
+    end
 
     testCase.verifyTrue(true)
 end

@@ -34,5 +34,4 @@ codegen/
 
 # LTspice files
 *.log
-*.net
 *.raw

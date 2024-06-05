@@ -1,0 +1,11 @@
+SPICE battery verification model
+V1 n1+ 0 PULSE(0 {Vin} 0 100f 100f 10p 0 1) Rser={imp1}
+T1 n1+ 0 n2+ n2- Td={pd1} Z0={imp1}
+T2 n2+ n2- n3+ n3- Td={pd2} Z0={imp2}
+T3 n3+ n3- n4+ n4- Td={pd3} Z0={imp3}
+Rend N4+ N4- {imp4m}
+.TRAN 0 {simTime} 0 {stepTime}
+.PRINT V(n1+)
+.PARAM Vin 2
+.PARAM stepTime 100f
+.PARAM imp4m={imp4+1m}
