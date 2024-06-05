@@ -2,7 +2,7 @@ function tests = battery_model_test
     tests = functiontests(localfunctions);
 end
 
-function setup(testCase)
+function setupOnce(testCase)
     % Specify as string to avoid precission error
     testCase.TestData.impedances = ["50" "25" "225/11" "0"; "50" "30" "30/13" "0";
                                     "50" "300" "39" "76.5"; "100" "200" "400" "1"];
@@ -10,6 +10,22 @@ function setup(testCase)
                                       85e-12 87.5e-12 90e-12; 82.5e-12 110e-12 137.5e-12];
     testCase.TestData.stepTime = 100e-15;
     testCase.TestData.stopTime = 5e-9;
+    numSteps = int32(testCase.TestData.stopTime/testCase.TestData.stepTime)+1;
+
+    % Get DUT data
+    numSims = size(testCase.TestData.delayLengths,1);
+    numStages = size(testCase.TestData.delayLengths,2);
+    for i=1:numSims
+        dut = battery_model("NUM_IMPEDANCES",numStages,...
+                            "IMPEDANCES",arrayfun(@str2num,testCase.TestData.impedances(i,:)),...
+                            "DELAY_LENGTH_TIME",testCase.TestData.delayLengths(i,:),...
+                            "STEP_TIME", testCase.TestData.stepTime);
+        dutOut(i,:) = zeros(1,numSteps);
+        for j=1:numSteps
+            dutOut(i,j) = dut(double(j==1));
+        end
+    end
+    testCase.TestData.dutOut = dutOut;
 end
 
 function test_with_model(testCase)
@@ -19,7 +35,6 @@ function test_with_model(testCase)
     stepTime = testCase.TestData.stepTime;
     stopTime = testCase.TestData.stopTime;
     numStages = length(impedances)-1;
-    numSteps = floorDiv(stopTime,stepTime)+1;
 
     numSims = size(impedances,1);
     for i=1:numSims
@@ -27,7 +42,7 @@ function test_with_model(testCase)
         simIn = Simulink.SimulationInput("battery_verification_model");
         modelName = simIn.ModelName;
         for j=1:numStages
-            delayLengthsUnit(j) = delayLengths(i,j)/stepTime;
+            delayLengthsUnit(j) = int32(delayLengths(i,j)/stepTime);
         end
         for j=1:numStages
             simIn = simIn.setBlockParameter(sprintf(modelName+"/transmit_delay%d",j),...
@@ -60,26 +75,18 @@ function test_with_model(testCase)
         simIn = simIn.setModelParameter("StopTime",string(stopTime));
 
         out = sim(simIn);
-        validationData = squeeze(out.yout{1}.Values.Data);
-
-        dut = battery_model("NUM_IMPEDANCES",numStages,"IMPEDANCES",...
-                            impedances(i,:),"DELAY_LENGTH_TIME",delayLengths(i,:));
-        dutOut = zeros(numSteps,1);
-        for j=1:numSteps
-            dutOut(j) = dut(double(j==1));
-        end
+        validationData = squeeze(out.yout{1}.Values.Data)';
+        dutOut = testCase.TestData.dutOut(i,:);
 
         testCase.verifyEqual(dutOut,validationData)
     end
 end
 
 function test_with_spice(testCase)
-    impedances = arrayfun(@str2num,testCase.TestData.impedances(1,:));
-    delayLengths = testCase.TestData.delayLengths(1,:);
-    numStages = numel(delayLengths);
+    dutOut = testCase.TestData.dutOut(1,:);
     stepTime = testCase.TestData.stepTime;
     stopTime = testCase.TestData.stopTime;
-    numSteps = int32(stopTime/stepTime)+1;
+    dutTime = 0:stepTime:stopTime;
 
     modelName = 'model'; % Exclude file extension
     ltspicePath = 'C:/"Program Files"/LTC/LTspiceXVII/XVIIx64.exe';
@@ -87,19 +94,11 @@ function test_with_spice(testCase)
     system(append(ltspicePath,' -b ',modelName,'.net'));
     spiceData = LTspice2Matlab(append(modelName,'.raw'));
 
-    dut = battery_model("NUM_IMPEDANCES",numStages,"IMPEDANCES",...
-                        impedances,"DELAY_LENGTH_TIME",delayLengths);
-    dutOut = zeros(numSteps,1);
-    for j=1:numSteps
-        dutOut(j) = dut(double(j==1));
-    end
-    dutTime = 0:stepTime:stopTime;
-
     hold on
-    plot(spiceData.time_vect,spiceData.variable_mat)
-    plot(dutTime,dutOut)
+    plot(spiceData.time_vect*1e9,spiceData.variable_mat)
+    plot(dutTime*1e9,dutOut)
     hold off
-    xlabel("Time (s)")
+    xlabel("Time (ns)")
     legend(["LTspice" "DUT"])
 
     testCase.verifyTrue(true)
